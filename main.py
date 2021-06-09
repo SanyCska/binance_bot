@@ -16,11 +16,12 @@ bot.
 
 import logging
 
+from binance import Client
 from telegram import Update, ForceReply
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CallbackContext
 
 # Enable logging
-from config import TELEGRAM_TOKEN
+from config import TELEGRAM_TOKEN, BINANCE_API_KEY, BINANCE_API_SECRET
 
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO
@@ -50,6 +51,35 @@ def echo(update: Update, context: CallbackContext) -> None:
     update.message.reply_text(update.message.text)
 
 
+def get_current_sum(update: Update, context: CallbackContext):
+    binance_client = Client(BINANCE_API_KEY, BINANCE_API_SECRET)
+    sum_btc = 0.0
+    balances = binance_client.get_account()
+    for _balance in balances["balances"]:
+        asset = _balance["asset"]
+        if float(_balance["free"]) != 0.0 or float(_balance["locked"]) != 0.0:
+            try:
+                btc_quantity = float(_balance["free"]) + float(_balance["locked"])
+                if asset == "BTC":
+                    sum_btc += btc_quantity
+                elif asset == 'USDT':
+                    current_btc_price_USD = 1/float(binance_client.get_symbol_ticker(symbol="BTCUSDT")["price"])
+                    sum_btc += btc_quantity * float(current_btc_price_USD)
+                else:
+                    _price = binance_client.get_symbol_ticker(symbol=asset + "BTC")
+                    sum_btc += btc_quantity * float(_price["price"])
+            except:
+                pass
+
+    current_btc_price_USD = binance_client.get_symbol_ticker(symbol="BTCUSDT")["price"]
+    own_usd = sum_btc * float(current_btc_price_USD)
+    print(" * Spot => %.8f BTC == " % sum_btc, end="")
+    print("%.8f USDT" % own_usd)
+
+    update.message.reply_text(str(own_usd))
+
+
+
 def main() -> None:
     """Start the bot."""
     # Create the Updater and pass it your bot's token.
@@ -61,6 +91,7 @@ def main() -> None:
     # on different commands - answer in Telegram
     dispatcher.add_handler(CommandHandler("start", start))
     dispatcher.add_handler(CommandHandler("help", help_command))
+    dispatcher.add_handler(CommandHandler("binance", get_current_sum))
 
     # on non command i.e message - echo the message on Telegram
     dispatcher.add_handler(MessageHandler(Filters.text & ~Filters.command, echo))
