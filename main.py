@@ -20,6 +20,8 @@ from telegram import Update, ForceReply
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CallbackContext
 
 # Enable logging
+from config import TELEGRAM_TOKEN
+
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO
 )
@@ -51,7 +53,7 @@ def echo(update: Update, context: CallbackContext) -> None:
 def main() -> None:
     """Start the bot."""
     # Create the Updater and pass it your bot's token.
-    updater = Updater('1704034753:AAGKkEfDPiTWexjfHnGSvyS9uP0Z9zjEgo4')
+    updater = Updater(TELEGRAM_TOKEN)
 
     # Get the dispatcher to register handlers
     dispatcher = updater.dispatcher
